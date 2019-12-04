@@ -242,7 +242,7 @@ class Database
         if data? then FS.createDataFile '/', @filename, data, true, true
         @handleError sqlite3_open @filename, apiTemp
         @db = getValue(apiTemp, 'i32')
-        RegisterExtensionFunctions(@db)
+        #RegisterExtensionFunctions(@db)
         @statements = {} # A list of all prepared statements of the database
         @functions = {} # A list of all user function of the database (created by create_function call)
 

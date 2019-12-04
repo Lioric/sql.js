@@ -11,13 +11,13 @@ SQLITE_AMALGAMATION_ZIP_URL = https://www.sqlite.org/2019/sqlite-amalgamation-33
 SQLITE_AMALGAMATION_ZIP_SHA1 = ff9b4e140fe0764bc7bc802facf5ac164443f517
 
 # Note that extension-functions.c hasn't been updated since 2010-02-06, so likely doesn't need to be updated 
-EXTENSION_FUNCTIONS = extension-functions.c
-EXTENSION_FUNCTIONS_URL = https://www.sqlite.org/contrib/download/extension-functions.c?get=25
-EXTENSION_FUNCTIONS_SHA1 = c68fa706d6d9ff98608044c00212473f9c14892f
+#EXTENSION_FUNCTIONS = extension-functions.c
+#EXTENSION_FUNCTIONS_URL = https://www.sqlite.org/contrib/download/extension-functions.c?get=25
+#EXTENSION_FUNCTIONS_SHA1 = c68fa706d6d9ff98608044c00212473f9c14892f
 
 EMCC=emcc
 
-CFLAGS=-O2 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DISABLE_LFS -DLONGDOUBLE_TYPE=double -DSQLITE_THREADSAFE=0 -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
+CFLAGS=-Os -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DISABLE_LFS -DLONGDOUBLE_TYPE=double -DSQLITE_THREADSAFE=0 -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
 
 # When compiling to WASM, enabling memory-growth is not expected to make much of an impact, so we enable it for all builds
 # Since tihs is a library and not a standalone executable, we don't want to catch unhandled Node process exceptions
@@ -44,7 +44,8 @@ EMFLAGS_DEBUG = \
 	-s ASSERTIONS=1 \
 	-O1
 
-BITCODE_FILES = out/sqlite3.bc out/extension-functions.bc
+BITCODE_FILES = out/sqlite3.bc
+#BITCODE_FILES = out/sqlite3.bc out/extension-functions.bc
 OUTPUT_WRAPPER_FILES = src/shell-pre.js src/shell-post.js
 
 all: optimized debug worker
