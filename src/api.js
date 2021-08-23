@@ -86,11 +86,11 @@ Module["onRuntimeInitialized"] = function onRuntimeInitialized() {
         ["number", "string", "number", "number", "number"]
     );
     var sqlite3_sql = cwrap("sqlite3_sql", "string", ["number"]);
-    var sqlite3_normalized_sql = cwrap(
-        "sqlite3_normalized_sql",
-        "string",
-        ["number"]
-    );
+//    var sqlite3_normalized_sql = cwrap(
+//        "sqlite3_normalized_sql",
+//        "string",
+//        ["number"]
+//    );
     var sqlite3_prepare_v2_sqlptr = cwrap(
         "sqlite3_prepare_v2",
         "number",
@@ -514,9 +514,9 @@ Module["onRuntimeInitialized"] = function onRuntimeInitialized() {
 
      @return {string} The normalized SQL string
      */
-    Statement.prototype["getNormalizedSQL"] = function getNormalizedSQL() {
-        return sqlite3_normalized_sql(this.stmt);
-    };
+//    Statement.prototype["getNormalizedSQL"] = function getNormalizedSQL() {
+//        return sqlite3_normalized_sql(this.stmt);
+//    };
 
     /** Shorthand for bind + step + reset
     Bind the values, execute the statement, ignoring the rows it returns,
