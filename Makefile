@@ -18,12 +18,15 @@ SQLITE_AMALGAMATION_ZIP_SHA1 = 5b0a95fc6090499c0cdf7f15fcec9c132f8e021e
 EMCC=emcc
 
 CFLAGS= \
-	-Os \
+	-Oz \
 	-DSQLITE_OMIT_LOAD_EXTENSION \
 	-DSQLITE_DISABLE_LFS \
-	-DSQLITE_THREADSAFE=0 \
 	-DSQLITE_ENABLE_FTS3 \
-	-DSQLITE_ENABLE_FTS3_PARENTHESIS
+	-DSQLITE_ENABLE_FTS3_PARENTHESIS \
+	-DSQLITE_THREADSAFE=0 \
+	-Isqlite-src/$(SQLITE_AMALGAMATION)/ \
+	-Ilibs/libstemmer_c \
+	-Ilibs/xor_filter
 
 # When compiling to WASM, enabling memory-growth is not expected to make much of an impact, so we enable it for all builds
 # Since tihs is a library and not a standalone executable, we don't want to catch unhandled Node process exceptions
@@ -36,14 +39,16 @@ EMFLAGS = \
 	-s EXTRA_EXPORTED_RUNTIME_METHODS=@src/exported_runtime_methods.json \
 	-s SINGLE_FILE=0 \
 	-s NODEJS_CATCH_EXIT=0 \
-	-s NODEJS_CATCH_REJECTION=0
+	-s ASSERTIONS=0 \
+	-s FILESYSTEM=1 \
+	-s MALLOC=emmalloc
 
-EMFLAGS_ASM = \
-	-s WASM=0
+#EMFLAGS_ASM = \
+#	-s WASM=0
 
-EMFLAGS_ASM_MEMORY_GROWTH = \
-	-s WASM=0 \
-	-s ALLOW_MEMORY_GROWTH=1
+#EMFLAGS_ASM_MEMORY_GROWTH = \
+#	-s WASM=0 \
+#	-s ALLOW_MEMORY_GROWTH=1
 
 EMFLAGS_WASM = \
 	-s WASM=1 \
@@ -51,16 +56,25 @@ EMFLAGS_WASM = \
 
 EMFLAGS_OPTIMIZED= \
 	-s INLINING_LIMIT=50 \
-	-O3 \
+	-Oz \
 	-flto \
 	--closure 1
 
 EMFLAGS_DEBUG = \
+	-g \
 	-s INLINING_LIMIT=10 \
 	-s ASSERTIONS=1 \
-	-O1
 
-BITCODE_FILES = out/sqlite3.bc
+SRC = sqlite-src/$(SQLITE_AMALGAMATION)/sqlite3.c src/fullTextSearch.c libs/libstemmer_c/runtime/api.c libs/libstemmer_c/runtime/utilities.c libs/libstemmer_c/libstemmer/libstemmer_utf8.c libs/libstemmer_c/src_c/stem_UTF_8_english.c libs/libstemmer_c/src_c/stem_UTF_8_spanish.c
+OBJ = $(SRC:.c=.bc)
+
+RELEASE_DIR = build/release
+RELEASE_OBJ = $(addprefix $(RELEASE_DIR)/, $(OBJ))
+
+DEBUG_DIR = build/debug
+DEBUG_OBJ = $(addprefix $(DEBUG_DIR)/, $(OBJ))
+
+#BITCODE_FILES = out/sqlite3.bc
 #BITCODE_FILES = out/sqlite3.bc out/extension-functions.bc
 
 OUTPUT_WRAPPER_FILES = src/shell-pre.js src/shell-post.js
@@ -75,50 +89,63 @@ EXPORTED_METHODS_JSON_FILES = src/exported_functions.json src/exported_runtime_m
 all: optimized debug worker
 
 .PHONY: debug
-debug: dist/sql-asm-debug.js dist/sql-wasm-debug.js
+debug: CFLAGS += -g
+debug: dist/sql-wasm-debug.js
 
-dist/sql-asm-debug.js: $(BITCODE_FILES) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
-	$(EMCC) $(EMFLAGS) $(EMFLAGS_DEBUG) $(EMFLAGS_ASM) $(BITCODE_FILES) $(EMFLAGS_PRE_JS_FILES) -o $@
-	mv $@ out/tmp-raw.js
-	cat src/shell-pre.js out/tmp-raw.js src/shell-post.js > $@
-	rm out/tmp-raw.js
+#dist/sql-asm-debug.js: $(BITCODE_FILES) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
+#	$(EMCC) $(EMFLAGS) $(EMFLAGS_DEBUG) $(EMFLAGS_ASM) $(BITCODE_FILES) $(EMFLAGS_PRE_JS_FILES) -o $@
+#	mv $@ out/tmp-raw.js
+#	cat src/shell-pre.js out/tmp-raw.js src/shell-post.js > $@
+#	rm out/tmp-raw.js
 
-dist/sql-wasm-debug.js: $(BITCODE_FILES) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
-	$(EMCC) $(EMFLAGS) $(EMFLAGS_DEBUG) $(EMFLAGS_WASM) $(BITCODE_FILES) $(EMFLAGS_PRE_JS_FILES) -o $@
-	mv $@ out/tmp-raw.js
-	cat src/shell-pre.js out/tmp-raw.js src/shell-post.js > $@
-	rm out/tmp-raw.js
+dist/sql-wasm-debug.js: sqlite-src/$(SQLITE_AMALGAMATION) $(DEBUG_OBJ) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
+	$(EMCC) $(EMFLAGS) $(EMFLAGS_DEBUG) $(EMFLAGS_WASM) $(DEBUG_OBJ) $(EMFLAGS_PRE_JS_FILES) -o $@
+	mv $@ build/debug/tmp-raw.js
+	cat src/shell-pre.js build/debug/tmp-raw.js src/shell-post.js > $@
+	rm build/debug/tmp-raw.js
+
+$(DEBUG_DIR)/%.bc: %.c
+	mkdir -p $(@D)
+	$(EMCC) $(CFLAGS) -s LINKABLE=1 -c $< -o $@
 
 .PHONY: optimized
-optimized: dist/sql-asm.js dist/sql-wasm.js dist/sql-asm-memory-growth.js
+optimized: dist/sql-wasm.js
 
-dist/sql-asm.js: $(BITCODE_FILES) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
-	$(EMCC) $(EMFLAGS) $(EMFLAGS_OPTIMIZED) $(EMFLAGS_ASM) $(BITCODE_FILES) $(EMFLAGS_PRE_JS_FILES) -o $@
-	mv $@ out/tmp-raw.js
-	cat src/shell-pre.js out/tmp-raw.js src/shell-post.js > $@
-	rm out/tmp-raw.js
+#dist/sql-asm.js: $(BITCODE_FILES) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
+#	$(EMCC) $(EMFLAGS) $(EMFLAGS_OPTIMIZED) $(EMFLAGS_ASM) $(BITCODE_FILES) $(EMFLAGS_PRE_JS_FILES) -o $@
+#	mv $@ out/tmp-raw.js
+#	cat src/shell-pre.js out/tmp-raw.js src/shell-post.js > $@
+#	rm out/tmp-raw.js
 
-dist/sql-wasm.js: $(BITCODE_FILES) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
-	$(EMCC) $(EMFLAGS) $(EMFLAGS_OPTIMIZED) $(EMFLAGS_WASM) $(BITCODE_FILES) $(EMFLAGS_PRE_JS_FILES) -o $@
-	mv $@ out/tmp-raw.js
-	cat src/shell-pre.js out/tmp-raw.js src/shell-post.js > $@
-	rm out/tmp-raw.js
+dist/sql-wasm.js: sqlite-src/$(SQLITE_AMALGAMATION) $(RELEASE_OBJ) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
+	$(EMCC) $(EMFLAGS) $(EMFLAGS_OPTIMIZED) $(EMFLAGS_WASM) $(RELEASE_OBJ) $(EMFLAGS_PRE_JS_FILES) -o $@
+	mv $@ build/release/tmp-raw.js
+	cat src/shell-pre.js build/release/tmp-raw.js src/shell-post.js > $@
+	rm build/release/tmp-raw.js
 
-dist/sql-asm-memory-growth.js: $(BITCODE_FILES) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
-	$(EMCC) $(EMFLAGS) $(EMFLAGS_OPTIMIZED) $(EMFLAGS_ASM_MEMORY_GROWTH) $(BITCODE_FILES) $(EMFLAGS_PRE_JS_FILES) -o $@
-	mv $@ out/tmp-raw.js
-	cat src/shell-pre.js out/tmp-raw.js src/shell-post.js > $@
-	rm out/tmp-raw.js
+$(RELEASE_DIR)/%.bc: %.c
+	mkdir -p $(@D)
+	$(EMCC) $(CFLAGS) -s LINKABLE=1 -c $< -o $@
+
+#$(RELEASE_DIR)/sqlite-src/$(SQLITE_AMALGAMATION)/sqlite3.bc: sqlite-src/$(SQLITE_AMALGAMATION)/sqlite3.c
+#	mkdir -p $(@D)
+#	$(EMCC) $(CFLAGS) -s LINKABLE=1 -c $< -o $@
+
+#dist/sql-asm-memory-growth.js: $(BITCODE_FILES) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
+#	$(EMCC) $(EMFLAGS) $(EMFLAGS_OPTIMIZED) $(EMFLAGS_ASM_MEMORY_GROWTH) $(BITCODE_FILES) $(EMFLAGS_PRE_JS_FILES) -o $@
+#	mv $@ out/tmp-raw.js
+#	cat src/shell-pre.js out/tmp-raw.js src/shell-post.js > $@
+#	rm out/tmp-raw.js
 
 # Web worker API
 .PHONY: worker
-worker: dist/worker.sql-asm.js dist/worker.sql-asm-debug.js dist/worker.sql-wasm.js dist/worker.sql-wasm-debug.js
+worker: dist/worker.sql-wasm.js dist/worker.sql-wasm-debug.js
 
-dist/worker.sql-asm.js: dist/sql-asm.js src/worker.js
-	cat $^ > $@
+#dist/worker.sql-asm.js: dist/sql-asm.js src/worker.js
+#	cat $^ > $@
 
-dist/worker.sql-asm-debug.js: dist/sql-asm-debug.js src/worker.js
-	cat $^ > $@
+#dist/worker.sql-asm-debug.js: dist/sql-asm-debug.js src/worker.js
+#	cat $^ > $@
 
 dist/worker.sql-wasm.js: dist/sql-wasm.js src/worker.js
 	cat $^ > $@
@@ -144,14 +171,14 @@ dist/worker.sql-wasm-debug.js: dist/sql-wasm-debug.js src/worker.js
 # 	#mv out/sql-wasm-debug.wasm dist/sql-wasm-debug.wasm
 # 	rm out/tmp-raw.js
 
-out/sqlite3.bc: sqlite-src/$(SQLITE_AMALGAMATION)
-	mkdir -p out
-	# Generate llvm bitcode
-	$(EMCC) $(CFLAGS) -c sqlite-src/$(SQLITE_AMALGAMATION)/sqlite3.c -o $@
+#out/sqlite3.bc: sqlite-src/$(SQLITE_AMALGAMATION)
+#	mkdir -p out
+#	# Generate llvm bitcode
+#	$(EMCC) $(CFLAGS) -c sqlite-src/$(SQLITE_AMALGAMATION)/sqlite3.c -o $@
 
-out/extension-functions.bc: sqlite-src/$(SQLITE_AMALGAMATION)/$(EXTENSION_FUNCTIONS)
-	mkdir -p out
-	$(EMCC) $(CFLAGS) -s LINKABLE=1 -c sqlite-src/$(SQLITE_AMALGAMATION)/extension-functions.c -o $@
+#out/extension-functions.bc: sqlite-src/$(SQLITE_AMALGAMATION)/$(EXTENSION_FUNCTIONS)
+#	mkdir -p out
+#	$(EMCC) $(CFLAGS) -s LINKABLE=1 -c sqlite-src/$(SQLITE_AMALGAMATION)/extension-functions.c -o $@
 
 # TODO: This target appears to be unused. If we re-instatate it, we'll need to add more files inside of the JS folder
 # module.tar.gz: test package.json AUTHORS README.md dist/sql-asm.js
@@ -162,31 +189,32 @@ cache/$(SQLITE_AMALGAMATION).zip:
 	mkdir -p cache
 	curl -LsSf '$(SQLITE_AMALGAMATION_ZIP_URL)' -o $@
 
-cache/$(EXTENSION_FUNCTIONS):
-	mkdir -p cache
-	curl -LsSf '$(EXTENSION_FUNCTIONS_URL)' -o $@
+#cache/$(EXTENSION_FUNCTIONS):
+#	mkdir -p cache
+#	curl -LsSf '$(EXTENSION_FUNCTIONS_URL)' -o $@
 
 ## sqlite-src
 .PHONY: sqlite-src
-sqlite-src: sqlite-src/$(SQLITE_AMALGAMATION) sqlite-src/$(EXTENSION_FUNCTIONS)
+sqlite-src: sqlite-src/$(SQLITE_AMALGAMATION)
+#sqlite-src: sqlite-src/$(SQLITE_AMALGAMATION) sqlite-src/$(EXTENSION_FUNCTIONS)
 
 sqlite-src/$(SQLITE_AMALGAMATION): cache/$(SQLITE_AMALGAMATION).zip
 	mkdir -p sqlite-src
 	echo '$(SQLITE_AMALGAMATION_ZIP_SHA1)  ./cache/$(SQLITE_AMALGAMATION).zip' > cache/check.txt
 	sha1sum -c cache/check.txt
 	rm -rf $@
-	unzip -u 'cache/$(SQLITE_AMALGAMATION).zip' -d sqlite-src/
+	unzip 'cache/$(SQLITE_AMALGAMATION).zip' -d sqlite-src/
 	touch $@
 
-sqlite-src/$(SQLITE_AMALGAMATION)/$(EXTENSION_FUNCTIONS): cache/$(EXTENSION_FUNCTIONS)
-	mkdir -p sqlite-src
-	echo '$(EXTENSION_FUNCTIONS_SHA1)  ./cache/$(EXTENSION_FUNCTIONS)' > cache/check.txt
-	sha1sum -c cache/check.txt
-	cp 'cache/$(EXTENSION_FUNCTIONS)' $@
+#sqlite-src/$(SQLITE_AMALGAMATION)/$(EXTENSION_FUNCTIONS): cache/$(EXTENSION_FUNCTIONS)
+#	mkdir -p sqlite-src
+#	echo '$(EXTENSION_FUNCTIONS_SHA1)  ./cache/$(EXTENSION_FUNCTIONS)' > cache/check.txt
+#	sha1sum -c cache/check.txt
+#	cp 'cache/$(EXTENSION_FUNCTIONS)' $@
 
 
 .PHONY: clean
 clean:
-	rm -f out/* dist/* cache/*
-	rm -rf sqlite-src/ c/
+	rm -f dist/* cache/*
+	rm -rf sqlite-src/ build/* c/
 

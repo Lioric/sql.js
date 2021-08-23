@@ -224,11 +224,49 @@ Module["onRuntimeInitialized"] = function onRuntimeInitialized() {
         "",
         ["number", "string", "number"]
     );
-    var registerExtensionFunctions = cwrap(
-        "RegisterExtensionFunctions",
-        "number",
-        ["number"]
-    );
+    var registerFullTextSearch= cwrap(
+       "registerFullTextSearch",
+       "number",
+       ["number"]
+   );
+	var createSearchFilter = cwrap(
+		"createFilterArray",
+		"number",
+		["string", "string"]
+	);
+	var searchFilterSize = cwrap(
+		"filterArraySize",
+		"number",
+		[]
+	);
+	var deleteFilter = cwrap(
+		"deleteFilterArray",
+		null,
+		[]
+	);
+//	var addFilterToken = cwrap(
+//		"cuckooFilterAdd",
+//		"boolean",
+//		["number", "string", "string"]
+//	);
+	var containsFilterToken = cwrap(
+		"containsToken",
+		"boolean",
+		["number", "string", "string"]
+	);
+
+	// Text Stemmer
+	var stemToken = cwrap(
+		"stemToken",
+		"string",
+		["string", "string"]
+	);
+
+//    var registerExtensionFunctions = cwrap(
+//        "RegisterExtensionFunctions",
+//        "number",
+//        ["number"]
+//    );
 
     /**
     * @classdesc
@@ -780,14 +818,16 @@ Module["onRuntimeInitialized"] = function onRuntimeInitialized() {
     * @param {number[]} data An array of bytes representing
     * an SQLite database file
     */
-    function Database(data) {
-        this.filename = "dbfile_" + (0xffffffff * Math.random() >>> 0);
+    function Database(name, data) {
+    	this.filename = name;
+//        this.filename = "dbfile_" + (0xffffffff * Math.random() >>> 0);
         if (data != null) {
             FS.createDataFile("/", this.filename, data, true, true);
         }
         this.handleError(sqlite3_open(this.filename, apiTemp));
         this.db = getValue(apiTemp, "i32");
-        registerExtensionFunctions(this.db);
+        registerFullTextSearch(this.db);
+//        registerExtensionFunctions(this.db);
         // A list of all prepared statements of the database
         this.statements = {};
         // A list of all user function of the database
@@ -1172,7 +1212,7 @@ Module["onRuntimeInitialized"] = function onRuntimeInitialized() {
             }
         }
         if (Object.prototype.hasOwnProperty.call(this.functions, name)) {
-            removeFunction(this.functions[name]);
+            removeFunction(this.functions[name]);uuu
             delete this.functions[name];
         }
         // The signature of the wrapped function is :
@@ -1193,6 +1233,63 @@ Module["onRuntimeInitialized"] = function onRuntimeInitialized() {
         return this;
     };
 
+//    Database.prototype["createSearchFilter"] = function(language, text) {
+//    	var filterArray = createSearchFilter(language, text);
+//		if(filterArray) {
+//			var size = searchFilterSize();
+//			var buffer = new Uint8Array(HEAP8.buffer, filterArray, size);
+//			return buffer;
+//		}
+//	};
+
+//	Database.prototype["filterSize"] = function() {
+//		return searchFilterSize();
+//	};
+
+//	Database.prototype["deleteFilter"] = function() {
+//		deleteFilter();
+//	};
+
+//	Database.prototype["addFilterToken"] = function addToken(filter, language, token) {
+//    	return addFilterToken(filter, language, token);
+//	};
+
+//	Database.prototype["containsFilterToken"] = function containsToken(filter, language, token) {
+//    	return containsFilterToken(filter, language, token);
+//	};
+
+//	Database.prototype["stemWord"] = function stemWord(language, token) {
+//    	return stemToken(language, token);
+//	};
+
+	class FullTextSearch {
+		static createSearchFilter(language, text) {
+			var filterArray = createSearchFilter(language, text);
+			if(filterArray) {
+				var size = searchFilterSize();
+				var buffer = new Uint8Array(HEAP8.buffer, filterArray, size);
+				return buffer;
+			}
+		}
+
+		filterSize() {
+			return searchFilterSize();
+		}
+
+		containsFilterToken(filter, language, token) {
+			return containsFilterToken(filter, language, token);
+		}
+
+		deleteFilter() {
+			deleteFilter();
+		}
+
+		stemWord(language, token) {
+			return stemToken(language, token);
+		}
+	}
+
     // export Database to Module
     Module.Database = Database;
+    Module.FullTextSearch = FullTextSearch;
 };
