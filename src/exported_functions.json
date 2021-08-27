@@ -47,5 +47,7 @@
 "_createFilterArray",
 "_filterArraySize",
 "_deleteFilterArray",
-"_stemToken"
+"_stemToken",
+"_sqlite3_vfs_find",
+"_register_for_idb"
 ]

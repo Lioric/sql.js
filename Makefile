@@ -9,6 +9,9 @@
 SQLITE_AMALGAMATION = sqlite-amalgamation-3310100
 SQLITE_AMALGAMATION_ZIP_URL = https://www.sqlite.org/2020/sqlite-amalgamation-3310100.zip
 SQLITE_AMALGAMATION_ZIP_SHA1 = a58e91a39b7b4ab720dbc843c201fb6a18eaf32b
+#SQLITE_AMALGAMATION = sqlite-amalgamation-3350000
+#SQLITE_AMALGAMATION_ZIP_URL = https://www.sqlite.org/2021/sqlite-amalgamation-3350000.zip
+#SQLITE_AMALGAMATION_ZIP_SHA1 = ba64bad885c9f51df765a9624700747e7bf21b79
 
 # Note that extension-functions.c hasn't been updated since 2010-02-06, so likely doesn't need to be updated
 #EXTENSION_FUNCTIONS = extension-functions.c
@@ -60,12 +63,13 @@ EMFLAGS_OPTIMIZED= \
 	-flto \
 	--closure 1
 
+
 EMFLAGS_DEBUG = \
 	-g \
-	-s INLINING_LIMIT=10 \
+	-s INLINING_LIMIT=0 \
 	-s ASSERTIONS=1 \
 
-SRC = sqlite-src/$(SQLITE_AMALGAMATION)/sqlite3.c src/fullTextSearch.c libs/libstemmer_c/runtime/api.c libs/libstemmer_c/runtime/utilities.c libs/libstemmer_c/libstemmer/libstemmer_utf8.c libs/libstemmer_c/src_c/stem_UTF_8_english.c libs/libstemmer_c/src_c/stem_UTF_8_spanish.c
+SRC = sqlite-src/$(SQLITE_AMALGAMATION)/sqlite3.c src/fullTextSearch.c src/vfs.c libs/libstemmer_c/runtime/api.c libs/libstemmer_c/runtime/utilities.c libs/libstemmer_c/libstemmer/libstemmer_utf8.c libs/libstemmer_c/src_c/stem_UTF_8_english.c libs/libstemmer_c/src_c/stem_UTF_8_spanish.c
 OBJ = $(SRC:.c=.bc)
 
 RELEASE_DIR = build/release
@@ -99,7 +103,7 @@ debug: dist/sql-wasm-debug.js
 #	rm out/tmp-raw.js
 
 dist/sql-wasm-debug.js: sqlite-src/$(SQLITE_AMALGAMATION) $(DEBUG_OBJ) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
-	$(EMCC) $(EMFLAGS) $(EMFLAGS_DEBUG) $(EMFLAGS_WASM) $(DEBUG_OBJ) $(EMFLAGS_PRE_JS_FILES) -o $@
+	EMCC_CLOSURE_ARGS="--externs src/fs-externs.js" $(EMCC) $(EMFLAGS) $(EMFLAGS_DEBUG) $(EMFLAGS_WASM) $(DEBUG_OBJ) $(EMFLAGS_PRE_JS_FILES) -o $@
 	mv $@ build/debug/tmp-raw.js
 	cat src/shell-pre.js build/debug/tmp-raw.js src/shell-post.js > $@
 	rm build/debug/tmp-raw.js
@@ -118,7 +122,7 @@ optimized: dist/sql-wasm.js
 #	rm out/tmp-raw.js
 
 dist/sql-wasm.js: sqlite-src/$(SQLITE_AMALGAMATION) $(RELEASE_OBJ) $(OUTPUT_WRAPPER_FILES) $(SOURCE_API_FILES) $(EXPORTED_METHODS_JSON_FILES)
-	$(EMCC) $(EMFLAGS) $(EMFLAGS_OPTIMIZED) $(EMFLAGS_WASM) $(RELEASE_OBJ) $(EMFLAGS_PRE_JS_FILES) -o $@
+	EMCC_CLOSURE_ARGS="--externs src/fs-externs.js" $(EMCC) $(EMFLAGS) $(EMFLAGS_OPTIMIZED) $(EMFLAGS_WASM) $(RELEASE_OBJ) $(EMFLAGS_PRE_JS_FILES) -o $@
 	mv $@ build/release/tmp-raw.js
 	cat src/shell-pre.js build/release/tmp-raw.js src/shell-post.js > $@
 	rm build/release/tmp-raw.js

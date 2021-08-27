@@ -7,6 +7,7 @@
   return initSqlJsPromise;
 } // The end of our initSqlJs function
 
+/*
 // This bit below is copied almost exactly from what you get when you use the MODULARIZE=1 flag with emcc
 // However, we don't want to use the emcc modularization. See shell-pre.js
 if (typeof exports === 'object' && typeof module === 'object'){
@@ -20,3 +21,4 @@ else if (typeof define === 'function' && define['amd']) {
 else if (typeof exports === 'object'){
     exports["Module"] = initSqlJs;
 }
+*/
