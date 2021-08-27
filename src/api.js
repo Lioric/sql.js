@@ -1277,6 +1277,12 @@ Module["onRuntimeInitialized"] = function onRuntimeInitialized() {
 //	};
 
 	class FullTextSearch {
+		/**
+ 		* createSearchFilter.
+		* @param {string} language Language key for the search filter.
+		* @param {string} text The text that makes the filters content.
+ 		* @return {Array<Uin8>} the search buffer.
+ 		*/
 		static createSearchFilter(language, text) {
 			var filterArray = createSearchFilter(language, text);
 			if(filterArray) {
@@ -1286,18 +1292,35 @@ Module["onRuntimeInitialized"] = function onRuntimeInitialized() {
 			}
 		}
 
+		/**
+		* @return {int} the filter size in bytes.
+		*/
 		filterSize() {
 			return searchFilterSize();
 		}
 
+		/**
+		* @param {Array<Uint8>} filter The filter to search in.
+		* @param {string} language The language of the filter contents.
+		* @param {string} token the text token to search for.
+		* @return {boolean} True if the search token is found in the filter.
+		*/
 		containsFilterToken(filter, language, token) {
 			return containsFilterToken(filter, language, token);
 		}
 
+		/**
+		* @return {void}
+		*/
 		deleteFilter() {
 			deleteFilter();
 		}
 
+		/**
+		* @param {string} language The langiage of the filter contents.
+		* @param {string} token the text token to stem.
+		* @return {string} The stem of the token.
+		*/
 		stemWord(language, token) {
 			return stemToken(language, token);
 		}
