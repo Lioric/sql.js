@@ -487,15 +487,16 @@ extern void debug(struct SN_env * z, int number, int line_count) {
     /*if (number >= 0) printf("%3d (line %4d): '", number, line_count);*/
     if (number >= 0) printf("%3d (line %4d): [%d]'", number, line_count,limit);
     for (i = 0; i <= limit; i++) {
-        if (z->lb == i) printf("{");
-        if (z->bra == i) printf("[");
-        if (z->c == i) printf("|");
-        if (z->ket == i) printf("]");
-        if (z->l == i) printf("}");
+        if (z->lb == i) puts("{");
+        if (z->bra == i) puts("[");
+        if (z->c == i) puts("|");
+        if (z->ket == i) puts("]");
+        if (z->l == i) puts("}");
         if (i < limit)
         {   int ch = z->p[i];
             if (ch == 0) ch = '#';
-            printf("%c", ch);
+            puts(ch);
+//            printf("%c", ch);
         }
     }
     printf("'\n");

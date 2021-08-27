@@ -9,7 +9,7 @@
 
 #ifndef XOR_MAX_ITERATIONS
 #define XOR_MAX_ITERATIONS 100 // probabillity of success should always be > 0.5 so 100 iterations is highly unlikely
-#endif 
+#endif
 
 /**
  * We assume that you have a large set of 64-bit integers
@@ -332,7 +332,7 @@ static inline void xor_make_buffer_current(xor_setbuffer_t *buffer,
     }
     *Qsize = qsize;
     buffer->counts[slot] = 0;
-  } 
+  }
 }
 
 
@@ -489,7 +489,7 @@ bool xor8_buffered_populate(const uint64_t *keys, uint32_t size, xor8_t *filter)
   while (true) {
     iterations ++;
     if(iterations > XOR_MAX_ITERATIONS) {
-      fprintf(stderr, "Too many iterations. Are all your keys unique?");
+      puts("Too many iterations. Are all your keys unique?");
       xor_free_buffer(&buffer0);
       xor_free_buffer(&buffer1);
       xor_free_buffer(&buffer2);
@@ -519,7 +519,7 @@ bool xor8_buffered_populate(const uint64_t *keys, uint32_t size, xor8_t *filter)
         Q0[Q0size].index = i;
         Q0[Q0size].hash = sets0[i].xormask;
         Q0size++;
-      } 
+      }
     }
 
     for (size_t i = 0; i < filter->blockLength; i++) {
@@ -686,7 +686,7 @@ bool xor8_populate(const uint64_t *keys, uint32_t size, xor8_t *filter) {
   while (true) {
     iterations ++;
     if(iterations > XOR_MAX_ITERATIONS) {
-      fprintf(stderr, "Too many iterations. Are all your keys unique?");
+      puts("Too many iterations. Are all your keys unique?");
       free(sets);
       free(Q);
       free(stack);
@@ -866,7 +866,7 @@ bool xor16_buffered_populate(const uint64_t *keys, uint32_t size, xor16_t *filte
   size_t arrayLength = filter->blockLength * 3; // size of the backing array
   xor_setbuffer_t buffer0, buffer1, buffer2;
   size_t blockLength = filter->blockLength;
-  bool ok0 = xor_init_buffer(&buffer0, blockLength); 
+  bool ok0 = xor_init_buffer(&buffer0, blockLength);
   bool ok1 =  xor_init_buffer(&buffer1, blockLength);
   bool ok2 =  xor_init_buffer(&buffer2, blockLength);
   if (!ok0 || !ok1 || !ok2) {
@@ -905,7 +905,7 @@ bool xor16_buffered_populate(const uint64_t *keys, uint32_t size, xor16_t *filte
   while (true) {
     iterations ++;
     if(iterations > XOR_MAX_ITERATIONS) {
-      fprintf(stderr, "Too many iterations. Are all your keys unique?");
+      puts("Too many iterations. Are all your keys unique?");
       xor_free_buffer(&buffer0);
       xor_free_buffer(&buffer1);
       xor_free_buffer(&buffer2);
@@ -1105,7 +1105,7 @@ bool xor16_populate(const uint64_t *keys, uint32_t size, xor16_t *filter) {
   while (true) {
     iterations ++;
     if(iterations > XOR_MAX_ITERATIONS) {
-      fprintf(stderr, "Too many iterations. Are all your keys unique?");
+      puts("Too many iterations. Are all your keys unique?");
       free(sets);
       free(Q);
       free(stack);
